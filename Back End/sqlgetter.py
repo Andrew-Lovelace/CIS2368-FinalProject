@@ -11,6 +11,7 @@ def createConnection(): #returns a connector for mydatabase
 )
 
 def insert(connection:mysql.connector ,table:str, values, primarykey="id"): #designed to be able to insert new rows into any give table on the connected database without issue
+    storedAsStrings = ["VAR_STRING","DATE"]#used to check late is a column data type needs quatations around it when being used in an insert statement
     columnname = []
     columntype = []
     columnnull = []
@@ -25,12 +26,13 @@ def insert(connection:mysql.connector ,table:str, values, primarykey="id"): #des
             columnname.append(i[0])
             columntype.append(FieldType.get_info(i[1]))#this takes the numerical value for an type and turns it into a string a person can understand, i found this on the mysql documentation https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-description.html
             columnnull.append(bool(i[6]))
+    print(columntype)
     for i in range(len(columnname)):
         if(columnname[i] in values or columnnull[i]):#creates group of the order the values are inserted and the group of the inserted values
             insertstring += ((int(i != 0) * ",") + columnname[i])
-            valuesstring += ((int(i != 0) * ",") + (int(columntype[i] == 'VAR_STRING') * '"') +values[columnname[i]] + (int(columntype[i] == 'VAR_STRING') * '"')) #will add quation marks around values that are intented to be strings
+            valuesstring += ((int(i != 0) * ",") + (int(columntype[i] in storedAsStrings) * '"') +str(values[columnname[i]]) + (int(columntype[i] in storedAsStrings) * '"')) #will add quation marks around values that are intented to be strings
         else:
-            raise  Exception("Missing a required vlue")
+            raise  Exception("Missing a required value " + columnname[i])
     insertstring += ")"
     valuesstring += ")"
     cursor.execute(f"insert into {table} {insertstring} values {valuesstring};")
@@ -56,3 +58,21 @@ def remove(connection, table, where):
     cursor = connection.cursor()
     cursor.execute(f"delete from {table} where {where}")
     connection.commit()
+
+def dicttosignle(dic):
+    outstring = ""
+    for key, value in dic.items():
+        outstring += (str(key) + "=" + ("'" * int(type(value) == str)) + str(value) + ("'" * int(type(value) == str))) + " "
+    return(outstring[0:-1])
+
+
+def dictodouble(dic, firststrings):
+    outstring1 = ""
+    outstring2 = ""
+    for key, value in dic.items():
+
+        if (key in firststrings):
+            outstring1 += (str(key) + "=" + ("'" * int(type(value) == str)) + str(value) + ("'" * int(type(value) == str))) + " "
+        else:
+            outstring2 += (str(key) + "=" + ("'" * int(type(value) == str)) + str(value) + ("'" * int(type(value) == str))) + " "
+    return(outstring1[0:-1],outstring2[0:-1])
